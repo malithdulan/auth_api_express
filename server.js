@@ -15,3 +15,7 @@ app.use("/api/password", require("./routes/api/forgotPassword"));
 
 // Run the server
 app.listen(5000, () => console.log(`Server running in 5000`));
+
+
+// Export the Express API
+module.exports = app;
