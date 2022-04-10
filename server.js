@@ -9,6 +9,7 @@ app.use(express.json({ extended: false }));
 connectToMongoDB();
 
 // Routes
+app.use("", require("./routes/api/home"));
 app.use("/api/auth", require("./routes/api/auth"));
 app.use("/api/password", require("./routes/api/forgotPassword"));
 
