@@ -1,11 +1,11 @@
-const { success, error, validation } = require("../../helpers/responseApi");
-const { randomString } = require("../../helpers/common");
+const { success, error, validation } = require("../helpers/responseApi");
+const { randomString } = require("../helpers/common");
 const { validationResult } = require("express-validator");
 const config = require("config");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../../models/User");
-const Verification = require("../../models/Verification");
+const User = require("../models/User");
+const Verification = require("../models/Verification");
 
 /**
  * @desc    Register a new user

@@ -7,14 +7,14 @@ const {
   login,
   resendVerification,
   getAuthenticatedUser,
-} = require("../../app/controllers/api/AuthController");
+} = require("../app/controllers/AuthController");
 
 // Middleware
 const {
   registerValidation,
   loginValidation,
   auth,
-} = require("../../app/middlewares/auth");
+} = require("../app/middlewares/auth");
 
 // Routes
 router.post("/register", registerValidation, register);
