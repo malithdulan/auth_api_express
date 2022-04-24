@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 // Routes
 router.get("/", function (req, res) {
-    res.send('Full Auth API');
+    res.redirect('https://auth-api-two.vercel.app/api-docs/')
 });
 
 module.exports = router;

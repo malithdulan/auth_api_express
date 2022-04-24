@@ -14,6 +14,10 @@ const verificationSchema = new mongoose.Schema({
     required: true,
     maxlength: 255,
   },
+  accountType: {
+    type: String,
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

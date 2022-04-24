@@ -1,8 +1,8 @@
-const { success, error, validation } = require("../../helpers/responseApi");
-const { randomString } = require("../../helpers/common");
+const { success, error, validation } = require("../helpers/responseApi");
+const { randomString } = require("../helpers/common");
 const bcrypt = require("bcryptjs");
-const User = require("../../models/User");
-const Verification = require("../../models/Verification");
+const User = require("../models/User");
+const Verification = require("../models/Verification");
 
 /**
  * @desc    Forgot user password

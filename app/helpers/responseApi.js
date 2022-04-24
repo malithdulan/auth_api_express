@@ -1,7 +1,7 @@
 /**
  * @desc    This file contain Success and Error response for sending to client / user
- * @author  Huda Prasetyo
- * @since   2020
+ * @author  Malith Dulan Kuruwita
+ * @since   2022
  */
 
 /**
@@ -11,22 +11,22 @@
  * @param   {object | array} results
  * @param   {number} statusCode
  */
-exports.success = (message, results, statusCode) => {
+exports.success = (message, data, statusCode) => {
   return {
     message,
     error: false,
     code: statusCode,
-    results,
+    data,
   };
 };
 
 /**
  * @desc    Send any error response
  *
- * @param   {string} message
+ * @param   {string} errorResult
  * @param   {number} statusCode
  */
-exports.error = (message, statusCode) => {
+exports.error = (message, data, statusCode) => {
   // List of common HTTP request code
   const codes = [200, 201, 400, 401, 404, 403, 422, 500];
 
@@ -38,8 +38,9 @@ exports.error = (message, statusCode) => {
 
   return {
     message,
-    code: statusCode,
     error: true,
+    code: statusCode,
+    data,
   };
 };
 
@@ -48,11 +49,11 @@ exports.error = (message, statusCode) => {
  *
  * @param   {object | array} errors
  */
-exports.validation = (errors) => {
+exports.validation = (data) => {
   return {
     message: "Validation errors",
     error: true,
     code: 422,
-    errors,
+    data,
   };
 };
