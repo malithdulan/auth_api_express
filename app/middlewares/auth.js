@@ -10,6 +10,8 @@ exports.registerValidation = [
   check("name", "Name is required").not().isEmpty(),
   check("email", "Email is required").not().isEmpty(),
   check("password", "Password is required").not().isEmpty(),
+  check("accountType", "Account type is required").not().isEmpty(),
+  check("deviceType", "Device type is required").not().isEmpty()
 ];
 
 /**
@@ -18,6 +20,7 @@ exports.registerValidation = [
 exports.loginValidation = [
   check("email", "Email is required").not().isEmpty(),
   check("password", "Password is required").not().isEmpty(),
+  check("accountType", "Account Type is required").not().isEmpty()
 ];
 
 /**

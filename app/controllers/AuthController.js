@@ -7,6 +7,9 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Verification = require("../models/Verification");
 
+const otpGenerator = require('otp-generator');
+var sns = require('aws-node-sns');
+
 /**
  * @desc    Register a new user
  * @method  POST api/auth/register
@@ -18,21 +21,27 @@ exports.register = async (req, res) => {
   if (!errors.isEmpty())
     return res.status(422).json(validation(errors.array()));
 
-  const { name, email, password } = req.body;
+  const { name, email, password, accountType, deviceType, phoneNumber } = req.body;
 
   try {
-    let user = await User.findOne({ email: email.toLowerCase() });
-
-    // Check the user email
-    if (user)
+    let user = await User.find({ email: email.toLowerCase(), accountType: accountType });
+    
+    // Check the user account already registered or not (same email can have all three accounts (email, facebook, google))
+    //Combination of email address and accountType determine the uniqueness of the account
+    if (user.length > 0)
       return res
         .status(422)
-        .json(validation({ msg: "Email already registered" }));
+        .json(validation({ msg: "This account is already registered", isAccountExist: true }));
+
+    let accountExpression = (accountType === 'google' || accountType === 'facebook' || accountType === 'email');
 
     let newUser = new User({
-      name,
+      name: name,
       email: email.toLowerCase().replace(/\s+/, ""),
-      password,
+      password: password,
+      accountType: accountType,
+      verified: accountExpression ? true : false,// If accountType is gmail or facebook, account is already activated
+      verifiedAt: accountExpression ? Date.now() : null
     });
 
     // Hash the password
@@ -42,25 +51,39 @@ exports.register = async (req, res) => {
     // Save the user
     await newUser.save();
 
-    // Save token for user to start verificating the account
-    let verification = new Verification({
-      token: randomString(50),
-      userId: newUser._id,
-      type: "Register New Account",
-    });
+    let verification = null;
+    //Create verification record if the accountType is email
+    if (!accountExpression) {
+      // Save token for user to start verificating the account
+      verification = new Verification({
+        token: randomString(50),
+        userId: newUser._id,
+        type: "Register New Account",
+        accountType: newUser.accountType,
+      });
+      // Save the verification data
+      await verification.save();
+    }
 
-    // Save the verification data
-    await verification.save();
+    //send otp verification through sms or email depending on device type
+    // if (deviceType === "mobile") {
+    //   sendOTPMobile(phoneNumber, email, deviceType)
+    // } else {//web
+    //   sendOTPWeb()
+    // }
+    
 
+    let successMessage = (accountExpression) ? "Register success, account activated" : "Register success, please activate your account.";
     // Send the response
     res.status(201).json(
       success(
-        "Register success, please activate your account.",
+        successMessage,
         {
           user: {
             id: newUser._id,
             name: newUser.name,
             email: newUser.email,
+            accountType: newUser.accountType,
             verified: newUser.verified,
             verifiedAt: newUser.verifiedAt,
             createdAt: newUser.createdAt,
@@ -75,6 +98,46 @@ exports.register = async (req, res) => {
     res.status(500).json(error("Server error", res.statusCode));
   }
 };
+
+// To add minutes to the current time
+function AddMinutesToDate(date, minutes) {
+  return new Date(date.getTime() + minutes*60000);
+}
+function sendOTPMobile(phoneNumber, email, deviceType) {
+  try {
+    //Generate OTP 
+  const otp = otpGenerator.generate(6, { alphabets: false, upperCase: false, specialChars: false });
+  const expiration_time = AddMinutesToDate(new Date(),10);
+  const message = require("../helpers/templates").phone_message(otp)
+  console.log(message)
+  console.log(phoneNumber)
+  // Settings Params for SMS
+  var params = {
+    Message: message,
+    PhoneNumber:  phoneNumber
+  };
+
+  sns.createClient({       
+    accessKeyId: "AKIAVSULBXTYZUCGDUN2",
+    secretAccessKey: "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",
+    region: "ap-south-1"  
+  });
+
+  sns.sendSMS(message , phoneNumber , "malithkuru" , "Transactional", function(error, data){
+    if (error){
+        console.log(error)
+    }else{
+        console.log('MessageID' , data)
+    }
+  });
+
+  } catch(error) {
+    console.log("error in otp send message")
+  }
+}
+function sendOTPWeb() {
+
+}
 
 /**
  * @desc    Verify a new user
@@ -140,42 +203,43 @@ exports.login = async (req, res) => {
   if (!errors.isEmpty())
     return res.status(422).json(validation(errors.array()));
 
-  const { email, password } = req.body;
+    //if accountType is gmail, facebook - password represent the access token
+  const { email, password, accountType } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.find({ email: email.toLowerCase(), accountType: accountType });
 
     // Check the email
     // If there's not exists
     // Throw the error
-    if (!user) return res.status(422).json(validation("Invalid credentials"));
+    if (user.length === 0) return res.status(422).json(validation("Invalid credentials"));
 
     // Check the password
-    let checkPassword = await bcrypt.compare(password, user.password);
+    let checkPassword = await bcrypt.compare(password, user[0].password);
     if (!checkPassword)
       return res.status(422).json(validation("Invalid credentials"));
 
     // Check user if not activated yet
     // If not activated, send error response
-    if (user && !user.verified)
+    if (user.length > 0 && !user[0].verified)
       return res
         .status(400)
-        .json(error("Your account is not active yet.", res.statusCode));
+        .json(error("SignIn error",{ msg: "Your account is not actived yet.", isActivated: false}, res.statusCode));
 
     // If the requirement above pass
     // Lets send the response with JWT token in it
     const payload = {
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
+        id: user[0]._id,
+        name: user[0].name,
+        email: user[0].email,
       },
     };
 
     jwt.sign(
       payload,
       config.get("jwtSecret"),
-      { expiresIn: 3600 },
+      { expiresIn: "120s" },
       (err, token) => {
         if (err) throw err;
 
